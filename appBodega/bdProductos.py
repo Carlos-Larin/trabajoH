@@ -1,179 +1,264 @@
 import tkinter as tk
 from tkinter import messagebox
-from tkinter import ttk  # Importar ttk para usar Treeview
-from model.productos_dao import crear_tabla, insertar_producto, ver_productos, borrar_producto
-from model.ventas_dao import crear_tabla_ventas, insertar_venta  # Asegúrate de tener estas funciones
+from tkinter import ttk
+from model.productos_dao import crear_tabla, insertar_producto, ver_productos, borrar_producto, modificar_producto
+from model.ventas_dao import crear_tabla_ventas, insertar_venta
 
 class App:
     def __init__(self, root):
         self.root = root
         self.root.title("RJL BDProductos")
-        self.root.geometry("800x600")
-        self.root.iconbitmap("appBodega/image/bodeg.ico")
+        self.root.geometry("900x700")
 
-        # Crear tablas si no existen al iniciar la aplicación
+        try:
+            self.root.iconbitmap("appBodega/image/bodeg.ico")
+        except Exception:
+            print("Icono no encontrado. Se usará el predeterminado.")
+
         crear_tabla()
         crear_tabla_ventas()
 
         self.frame = tk.Frame(root, bg="peach puff")
         self.frame.pack(pady=20)
 
-        # Definición de campos
         tk.Label(self.frame, text="Nombre del Cliente:", bg="peach puff").grid(row=0, column=0, padx=10, pady=10)
         self.entry_cliente = tk.Entry(self.frame)
         self.entry_cliente.grid(row=0, column=1)
 
-        tk.Label(self.frame, text="ID Producto:", bg="peach puff").grid(row=1, column=0, padx=10, pady=10)
-        self.entry_id = tk.Entry(self.frame)
-        self.entry_id.grid(row=1, column=1)
-
-        tk.Label(self.frame, text="Nombre del Producto:", bg="peach puff").grid(row=2, column=0, padx=10, pady=10)
-        self.entry_nombre = tk.Entry(self.frame)
-        self.entry_nombre.grid(row=2, column=1)
-
-        tk.Label(self.frame, text="Cantidad:", bg="peach puff").grid(row=3, column=0, padx=10, pady=10)
-        self.entry_cantidad = tk.Entry(self.frame)
-        self.entry_cantidad.grid(row=3, column=1)
-
-        tk.Label(self.frame, text="Precio por Unidad:", bg="peach puff").grid(row=4, column=0, padx=10, pady=10)
-        self.entry_precio_unitario = tk.Entry(self.frame)
-        self.entry_precio_unitario.grid(row=4, column=1)
-
-        tk.Label(self.frame, text="Total del Producto:", bg="peach puff").grid(row=5, column=0, padx=10, pady=10)
-        self.entry_total_producto = tk.Entry(self.frame)
-        self.entry_total_producto.grid(row=5, column=1)
-
-        # Frame para los botones
         button_frame = tk.Frame(root, bg="peach puff")
         button_frame.pack(pady=(10, 20))
 
-        btn_calcular = tk.Button(button_frame, text="Calcular Total", command=self.calcular_total)
-        btn_calcular.grid(row=0, column=0, padx=(5, 10))
+        tk.Button(button_frame, text="Ver Productos", command=self.mostrar_productos).grid(row=0, column=0, padx=(5, 10))
+        tk.Button(button_frame, text="Agregar Producto", command=self.agregar_producto).grid(row=0, column=1, padx=(5, 10))
+        tk.Button(button_frame, text="Agregar a Venta", command=self.agregar_a_venta).grid(row=0, column=2, padx=(5, 10))
+        tk.Button(button_frame, text="Modificar Producto", command=self.modificar_producto).grid(row=0, column=3, padx=(5, 10))
+        tk.Button(button_frame, text="Borrar Producto", command=self.borrar_producto).grid(row=0, column=4, padx=(5, 10))
 
-        btn_guardar = tk.Button(button_frame, text="Guardar Producto", command=self.guardar_producto)
-        btn_guardar.grid(row=0, column=1)
+        self.tree = ttk.Treeview(root, selectmode="none")
+        self.tree["columns"] = ("Seleccionar", "ID", "Nombre", "Precio Unitario", "Cantidad", "Subtotal")
 
-        btn_ver_productos = tk.Button(button_frame, text="Ver Productos", command=self.mostrar_productos)
-        btn_ver_productos.grid(row=0,column=2)
-
-        btn_borrar = tk.Button(button_frame,text="Borrar Producto",command=self.borrar_producto)
-        btn_borrar.grid(row=0,column=3)
-
-        btn_agregar_venta = tk.Button(button_frame,text="Agregar a Venta",command=self.agregar_a_venta)
-        btn_agregar_venta.grid(row=0,column=4)
-
-         # Configuración de Treeview para mostrar productos
-        self.tree = ttk.Treeview(root)
-        
-       # Definir columnas en el Treeview
-        self.tree["columns"] = ("ID", "Nombre", "Cantidad", "Precio", "Total")
-        
         for col in self.tree["columns"]:
-                self.tree.heading(col,text=col)  # Encabezados de columnas
-                
-        self.tree["show"] = "headings"  # Mostrar encabezados
-        self.tree.pack(pady=(10 , 20), fill=tk.BOTH)  # Llenar el espacio disponible
+            self.tree.heading(col, text=col)
 
-    def calcular_total(self):
-       """Calcula el total del producto solicitado."""
-       try:
-           cantidad = int(self.entry_cantidad.get())
-           precio_unitario = float(self.entry_precio_unitario.get())
-           total_producto = cantidad * precio_unitario
-           self.entry_total_producto.delete(0 ,tk.END)  # Limpia el campo antes de insertar
-           self.entry_total_producto.insert(0 ,f"{total_producto:.2f}")  # Muestra el total formateado
-       except ValueError:
-           messagebox.showerror("Error" ,"Por favor ingresa valores válidos.")
+        self.tree.column("Seleccionar", width=80, anchor="center")
+        self.tree.column("ID", width=50, anchor="center")
+        self.tree.column("Nombre", width=150, anchor="w")
+        self.tree.column("Precio Unitario", width=100, anchor="center")
+        self.tree.column("Cantidad", width=100, anchor="center")
+        self.tree.column("Subtotal", width=100, anchor="center")
 
-    def guardar_producto(self):
-       """Guarda los datos del producto en la base de datos."""
-       try:
-           item = self.entry_id.get()
-           nombre_producto = self.entry_nombre.get()
-           cantidad = float(self.entry_cantidad.get())
-           precio_unitario = float(self.entry_precio_unitario.get())
-           
-            # Inserta el producto en la base de datos
-           insertar_producto(item.strip() ,nombre_producto.strip() ,cantidad ,precio_unitario)  
+        self.tree["show"] = "headings"
+        self.tree.pack(pady=(10, 20), fill=tk.BOTH, expand=True)
 
-           messagebox.showinfo("Éxito" ,f"Producto guardado:\nID: {item}\nNombre: {nombre_producto}\nCantidad: {cantidad}\nPrecio Unitario: {precio_unitario}")
-           
-            # Limpiar campos después de guardar
-           self.clear_entries()
+        self.tree.bind("<Double-1>", self.editar_cantidad)
+        self.tree.bind("<Button-1>", self.toggle_seleccion)
 
-            # Actualiza la visualización de productos
-           self.mostrar_productos()
+        self.total_label = tk.Label(root, text="Total a pagar: $0.00", font=("Arial", 14), bg="peach puff")
+        self.total_label.pack(anchor="e", padx=20, pady=(0, 20))
 
-       except ValueError:
-           messagebox.showerror("Error" ,"Por favor ingresa valores válidos.")
+        self.productos_seleccionados = {}
+
+    def editar_cantidad(self, event):
+        item_id = self.tree.focus()
+        if not item_id:
+            return
+
+        valores = self.tree.item(item_id, "values")
+        if not valores:
+            return
+
+        # Mostrar un mensaje emergente para confirmar la cantidad
+        try:
+            nueva_cantidad = int(messagebox.askinteger("Editar Cantidad", "Ingrese la nueva cantidad:", initialvalue=valores[4]))
+            if nueva_cantidad < 0:
+                raise ValueError("La cantidad no puede ser negativa.")
+
+            # Actualizar la base de datos
+            producto_id = valores[1]  # Columna de ID
+            modificar_producto(producto_id, valores[1], valores[2], nueva_cantidad, valores[3])
+
+            # Actualizar la interfaz
+            precio_unitario = float(valores[3])
+            subtotal = nueva_cantidad * precio_unitario
+            self.tree.item(item_id, values=(valores[0], valores[1], valores[2], f"{precio_unitario:.2f}", nueva_cantidad, f"{subtotal:.2f}"))
+
+            # Actualizar los datos seleccionados
+            self.productos_seleccionados[item_id]["cantidad"] = nueva_cantidad
+            self.productos_seleccionados[item_id]["subtotal"] = subtotal
+
+            self.calcular_total()
+        except ValueError as e:
+            messagebox.showerror("Error", f"Cantidad inválida: {e}")
 
     def mostrar_productos(self):
-       """Muestra los productos almacenados en el Treeview."""
-       for row in self.tree.get_children():
-           self.tree.delete(row)  # Limpia el Treeview antes de mostrar nuevos datos
+        self.tree.delete(*self.tree.get_children())
+        try:
+            productos = ver_productos()
+            for p in productos:
+                item_id = self.tree.insert("", "end", values=("No", p[0], p[1], f"{p[3]:.2f}", 0, 0))
+                self.productos_seleccionados[item_id] = {
+                    "seleccionado": False,
+                    "cantidad": 0,
+                    "subtotal": 0.0,
+                    "precio_unitario": p[3]
+                }
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudieron cargar los productos: {e}")
 
-       productos = ver_productos()  # Llama a la función para obtener productos
-        
-       for p in productos:
-           # Inserta cada producto en el Treeview
-           self.tree.insert("" ,"end" ,values=(p[0] ,p[1] ,p[2] ,p[3] ,p[4]))
+    def toggle_seleccion(self, event):
+        column = self.tree.identify_column(event.x)
+        item_id = self.tree.identify_row(event.y)
+        if column == "#1" and item_id:
+            current_value = self.tree.set(item_id, "Seleccionar")
+            new_value = "Sí" if current_value == "No" else "No"
+            self.tree.set(item_id, "Seleccionar", new_value)
+            self.productos_seleccionados[item_id]["seleccionado"] = (new_value == "Sí")
 
-    def borrar_producto(self):
-       """Borra el producto seleccionado del Treeview y de la base de datos."""
-       selected_item = self.tree.selection()
-       
-       if not selected_item:
-           messagebox.showwarning("Advertencia" ,"Seleccione un producto para borrar.")
-           return
-        
-       item_id = self.tree.item(selected_item)["values"][0]  # Obtiene el ID del producto seleccionado
-        
-       borrar_producto(item_id)  # Llama a la función para borrar el producto en la base de datos
-        
-       messagebox.showinfo("Éxito" ,f"Producto con ID {item_id} ha sido borrado.")
-        
-       # Actualiza la visualización de productos
-       self.mostrar_productos()
+    def agregar_producto(self):
+        producto_popup = tk.Toplevel(self.root)
+        producto_popup.title("Agregar Producto")
+
+        tk.Label(producto_popup, text="ID del Producto:").grid(row=0, column=0, pady=5, padx=5)
+        entry_id = tk.Entry(producto_popup)
+        entry_id.grid(row=0, column=1, pady=5, padx=5)
+
+        tk.Label(producto_popup, text="Nombre del Producto:").grid(row=1, column=0, pady=5, padx=5)
+        entry_nombre = tk.Entry(producto_popup)
+        entry_nombre.grid(row=1, column=1, pady=5, padx=5)
+
+        tk.Label(producto_popup, text="Precio Unitario:").grid(row=2, column=0, pady=5, padx=5)
+        entry_precio = tk.Entry(producto_popup)
+        entry_precio.grid(row=2, column=1, pady=5, padx=5)
+
+        tk.Label(producto_popup, text="Cantidad:").grid(row=3, column=0, pady=5, padx=5)
+        entry_cantidad = tk.Entry(producto_popup)
+        entry_cantidad.grid(row=3, column=1, pady=5, padx=5)
+
+        def guardar_producto():
+            try:
+                producto_id = entry_id.get().strip()
+                nombre = entry_nombre.get().strip()
+                precio = float(entry_precio.get())
+                cantidad = int(entry_cantidad.get())
+
+                if not producto_id or not nombre or precio <= 0 or cantidad < 0:
+                    raise ValueError("Datos inválidos.")
+
+                productos_existentes = [p[0] for p in ver_productos()]
+                if producto_id in productos_existentes:
+                    raise ValueError("El ID del producto ya existe.")
+
+                insertar_producto(producto_id, nombre, precio, cantidad)
+                messagebox.showinfo("Éxito", "Producto agregado correctamente.")
+                producto_popup.destroy()
+                self.mostrar_productos()
+
+            except ValueError as e:
+                messagebox.showerror("Error", f"{e}")
+
+        tk.Button(producto_popup, text="Guardar", command=guardar_producto).grid(row=4, columnspan=2, pady=10)
+
+    def calcular_total(self):
+        total = sum(prod["subtotal"] for prod in self.productos_seleccionados.values() if prod["seleccionado"])
+        self.total_label.config(text=f"Total a pagar: ${total:.2f}")
 
     def agregar_a_venta(self):
-         """Agrega los productos seleccionados a una venta."""
-         cliente_nombre = self.entry_cliente.get().strip()
-         if not cliente_nombre:
-             messagebox.showwarning("Advertencia", "Por favor ingrese el nombre del cliente.")
-             return
+        cliente = self.entry_cliente.get().strip()
+        if not cliente:
+            messagebox.showerror("Error", "Debe ingresar el nombre del cliente.")
+            return
 
-         selected_items = [self.tree.item(item)["values"] for item in self.tree.selection()]
-         
-         if not selected_items:
-             messagebox.showwarning("Advertencia", "Seleccione al menos un producto para agregar a la venta.")
-             return
+        productos_a_vender = [(k, v) for k, v in self.productos_seleccionados.items() if v["seleccionado"]]
 
-         productos_str = ", ".join([f"{item[1]} (Cantidad: {item[2]})" for item in selected_items])
-         
-         insertar_venta(cliente_nombre ,productos_str)  # Inserta los productos como un solo registro.
-         
-         for item in selected_items:
-             item_id = item[0]
-             borrar_producto(item_id)  # Borra el producto después de agregarlo a la venta.
+        if not productos_a_vender:
+            messagebox.showerror("Error", "No hay productos seleccionados para la venta.")
+            return
 
-         messagebox.showinfo("Éxito", f"Productos agregados a la venta para {cliente_nombre}.")
-         
-         # Actualiza la visualización de productos
-         self.mostrar_productos()
+        try:
+            for item_id, producto in productos_a_vender:
+                if producto["cantidad"] == 0:
+                    raise ValueError("Debe especificar una cantidad válida para todos los productos seleccionados.")
+                insertar_venta(cliente, self.tree.set(item_id, "ID"), producto["cantidad"], producto["subtotal"])
 
-    def clear_entries(self):
-         """Limpia todos los campos de entrada."""
-         self.entry_cliente.delete(0 ,tk.END)  # Limpiar campo cliente
-         self.entry_id.delete(0 ,tk.END)
-         self.entry_nombre.delete(0 ,tk.END)
-         self.entry_cantidad.delete(0 ,tk.END)
-         self.entry_precio_unitario.delete(0 ,tk.END)
-         self.entry_total_producto.delete(0 ,tk.END)
+            messagebox.showinfo("Éxito", "Venta realizada con éxito.")
+            self.mostrar_productos()
+            self.calcular_total()
 
-def main():
+        except ValueError as e:
+            messagebox.showerror("Error", f"{e}")
+
+    def modificar_producto(self):
+        item_id = self.tree.focus()
+        if not item_id:
+            messagebox.showwarning("Advertencia", "Por favor, seleccione un producto para modificar.")
+            return
+
+        valores = self.tree.item(item_id, "values")
+        if not valores:
+            return
+
+        producto_popup = tk.Toplevel(self.root)
+        producto_popup.title("Modificar Producto")
+
+        tk.Label(producto_popup, text="ID del Producto:").grid(row=0, column=0, pady=5, padx=5)
+        entry_id = tk.Entry(producto_popup)
+        entry_id.insert(0, valores[1])
+        entry_id.grid(row=0, column=1, pady=5, padx=5)
+
+        tk.Label(producto_popup, text="Nombre del Producto:").grid(row=1, column=0, pady=5, padx=5)
+        entry_nombre = tk.Entry(producto_popup)
+        entry_nombre.insert(0, valores[2])
+        entry_nombre.grid(row=1, column=1, pady=5, padx=5)
+
+        tk.Label(producto_popup, text="Precio Unitario:").grid(row=2, column=0, pady=5, padx=5)
+        entry_precio = tk.Entry(producto_popup)
+        entry_precio.insert(0, valores[3])
+        entry_precio.grid(row=2, column=1, pady=5, padx=5)
+
+        def guardar_cambios():
+            try:
+                nuevo_id = entry_id.get().strip()
+                nombre = entry_nombre.get().strip()
+                precio = float(entry_precio.get())
+
+                if not nuevo_id or not nombre or precio <= 0:
+                    raise ValueError("Datos inválidos.")
+
+                producto_original_id = valores[1]  # El ID original del producto seleccionado
+
+                if nuevo_id != producto_original_id:
+                    productos_existentes = [p[0] for p in ver_productos()]
+                    if nuevo_id in productos_existentes:
+                        raise ValueError("El nuevo ID del producto ya existe.")
+
+                cantidad_actual = int(valores[4])  # La cantidad no se modifica, se toma directamente del Treeview
+                subtotal = precio * cantidad_actual  # Recalcular el subtotal
+
+                modificar_producto(producto_original_id, nuevo_id, nombre, cantidad_actual, precio)
+                self.tree.item(item_id, values=("No", nuevo_id, nombre, f"{precio:.2f}", cantidad_actual, f"{subtotal:.2f}"))
+
+                messagebox.showinfo("Éxito", "Producto modificado correctamente.")
+                producto_popup.destroy()
+                self.calcular_total()
+
+            except ValueError as e:
+                messagebox.showerror("Error", f"{e}")
+
+        tk.Button(producto_popup, text="Guardar Cambios", command=guardar_cambios).grid(row=3, columnspan=2, pady=10)
+
+    def borrar_producto(self):
+        item_id = self.tree.focus()
+        if not item_id:
+            messagebox.showerror("Error", "Seleccione un producto para borrar.")
+            return
+
+        producto_id = self.tree.set(item_id, "ID")
+        if messagebox.askyesno("Confirmar", "¿Está seguro de que desea borrar este producto?"):
+            borrar_producto(producto_id)
+            messagebox.showinfo("Éxito", "Producto borrado correctamente.")
+            self.mostrar_productos()
+
+if __name__ == "__main__":
     root = tk.Tk()
-    app = App(root)  # Crea una instancia de la clase App
+    app = App(root)
     root.mainloop()
-
-if __name__ == '__main__':
-    main()
