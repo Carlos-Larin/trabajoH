@@ -83,15 +83,3 @@ def borrar_venta(venta_id):
     conexion.cursor.execute(sql, (venta_id,))
     conexion.cerrar()
 
-def modificar_venta(venta_id, nuevo_cliente_nombre, nuevos_productos):
-    conexion = ConexionDB()  # Instancia de conexión
-    total_nuevo = calcular_total(nuevos_productos)  # Calcula el nuevo total
-    
-    sql = '''
-    UPDATE ventas 
-    SET CLIENTE_NOMBRE=?, PRODUCTOS=?, TOTAL=? 
-    WHERE ID_VENTA=?
-    '''
-    
-    conexion.cursor.execute(sql, (nuevo_cliente_nombre, nuevos_productos, total_nuevo, venta_id))
-    conexion.cerrar()

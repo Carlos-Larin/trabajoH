@@ -182,17 +182,19 @@ class App:
 
         productos_a_vender = []
         for item_id in self.tree.get_children():
-            if self.tree.item(item_id)["values"][0]:  # Verifica si está seleccionado
+            # Verifica si el producto está seleccionado
+            if self.tree.item(item_id)["values"][0] == "Sí":  # Solo procesa si está seleccionado
                 nombre = self.tree.item(item_id)["values"][2]  # Nombre del producto
                 try:
                     cantidad = float(self.tree.item(item_id)["values"][4])  # Acepta cantidades decimales
-                    subtotal = float(self.tree.item(item_id)["values"][3].replace('$', '').replace(',', '')) * cantidad  # Subtotal calculado aquí
                     if cantidad <= 0:
                         raise ValueError("La cantidad debe ser mayor que cero.")
+                    subtotal = float(self.tree.item(item_id)["values"][3].replace('$', '').replace(',', '')) * cantidad  # Subtotal calculado aquí
                     productos_a_vender.append(f"{nombre} x {cantidad} (${subtotal:.2f})")
                 except ValueError as e:
                     messagebox.showerror("Error", f"Error al procesar el producto '{nombre}': {e}")
 
+        # Verifica si se han agregado productos a la lista
         if not productos_a_vender:
             messagebox.showwarning("Advertencia", "No se han seleccionado productos para la venta.")
             return
