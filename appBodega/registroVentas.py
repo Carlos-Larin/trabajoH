@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog, Toplevel
 from tkinter import ttk
-from model.ventas_dao import ver_ventas, borrar_venta, modificar_venta
+from model.ventas_dao import ver_ventas, borrar_venta, modificar_venta,obtener_precio_unitario
 
 
 class RegistroVentas:
@@ -93,7 +93,7 @@ class RegistroVentas:
         self.mostrar_ventas()
 
     def modificar_venta(self):
-        """Modifica solo un producto de la venta seleccionada."""
+        """Modifica un producto de la venta seleccionada."""
         selected_item = self.tree.selection()
         
         if not selected_item:
@@ -115,34 +115,107 @@ class RegistroVentas:
         label.pack(pady=10)
 
         # Tabla para mostrar productos
-        product_tree = ttk.Treeview(top, columns=("Producto"), show="headings")
+        product_tree = ttk.Treeview(top, columns=("Producto", "Cantidad", "Precio Unitario", "Total"), show="headings")
         product_tree.heading("Producto", text="Producto")
+        product_tree.heading("Cantidad", text="Cantidad")
+        product_tree.heading("Precio Unitario", text="Precio Unitario")
+        product_tree.heading("Total", text="Total")
         product_tree.pack(fill=tk.BOTH, expand=True, pady=10)
 
         # Rellenar la tabla con los productos
         for prod in productos_lista:
-            product_tree.insert("", "end", values=(prod.strip(),))
+            nombre_producto = prod.strip()
+            cantidad = 1  # Asignar una cantidad por defecto (puedes ajustar esto según tu lógica)
+            precio_unitario = obtener_precio_unitario(nombre_producto)  # Obtener el precio unitario
+            total_producto = cantidad * precio_unitario
+            product_tree.insert("", "end", values=(nombre_producto, cantidad, f"${precio_unitario:.2f}", f"${total_producto:.2f}"))
 
-        # Función para confirmar la modificación
+        # Función para actualizar el total al cambiar la cantidad o el precio unitario
+        def actualizar_total():
+            for item in product_tree.get_children():
+                item_values = product_tree.item(item)["values"]
+                try:
+                    nueva_cantidad = int(item_values[1])  # Obtener cantidad actual
+                    precio_unitario = float(item_values[2].replace('$', '').replace(',', ''))  # Obtener precio unitario
+                    nuevo_total = nueva_cantidad * precio_unitario
+                    product_tree.item(item, values=(item_values[0], nueva_cantidad, f"${precio_unitario:.2f}", f"${nuevo_total:.2f}"))
+                except ValueError:
+                    pass
+
+        # Función para editar la cantidad al hacer doble clic
+        def on_double_click_cantidad(event):
+            selected_product = product_tree.selection()
+            if not selected_product:
+                return
+            
+            item_values = product_tree.item(selected_product)["values"]
+            old_quantity = item_values[1]  # Obtener cantidad actual
+            
+            new_quantity_str = simpledialog.askstring("Modificar Cantidad", f"Ingrese nueva cantidad para '{item_values[0]}':", initialvalue=old_quantity)
+            
+            if new_quantity_str is not None:
+                try:
+                    new_quantity = int(new_quantity_str)
+                    product_tree.item(selected_product, values=(item_values[0], new_quantity,
+                                                                item_values[2], 
+                                                                f"${new_quantity * float(item_values[2].replace('$', '').replace(',', '')):.2f}"))
+                    actualizar_total()  # Actualiza el total después de cambiar la cantidad
+                except ValueError:
+                    messagebox.showerror("Error", "Por favor ingrese una cantidad válida.")
+
+        # Función para editar el precio unitario al hacer doble clic
+        def on_double_click_precio(event):
+            selected_product = product_tree.selection()
+            if not selected_product:
+                return
+            
+            item_values = product_tree.item(selected_product)["values"]
+            old_price_str = item_values[2].replace('$', '').replace(',', '')  # Obtener precio actual
+            
+            new_price_str = simpledialog.askstring("Modificar Precio Unitario", f"Ingrese nuevo precio para '{item_values[0]}':", initialvalue=old_price_str)
+            
+            if new_price_str is not None:
+                try:
+                    new_price = float(new_price_str)
+                    nueva_cantidad = int(item_values[1])  # Obtener cantidad actual
+                    nuevo_total = nueva_cantidad * new_price
+                    
+                    product_tree.item(selected_product, values=(item_values[0], nueva_cantidad,
+                                                                f"${new_price:.2f}", 
+                                                                f"${nuevo_total:.2f}"))
+                    actualizar_total()  # Actualiza el total después de cambiar el precio unitario
+                except ValueError:
+                    messagebox.showerror("Error", "Por favor ingrese un precio válido.")
+
+        # Asociar los eventos de doble clic a las funciones correspondientes
+        product_tree.bind("<Double-1>", lambda event: on_double_click_cantidad(event) if product_tree.identify_column(event.x) == '#2' else on_double_click_precio(event) if product_tree.identify_column(event.x) == '#3' else None)
+
+        # Botón para confirmar la modificación
         def confirmar_modificacion():
             selected_product = product_tree.selection()
             if not selected_product:
                 messagebox.showwarning("Advertencia", "Seleccione un producto para modificar.")
                 return
             
-            old_product = product_tree.item(selected_product)["values"][0]  # Producto seleccionado
-            new_product = simpledialog.askstring("Modificar Producto", f"Ingrese el nuevo nombre para '{old_product}':")
-
-            if new_product:
-                # Actualizar el producto en la lista
+            item_values = product_tree.item(selected_product)["values"]
+            old_product_name = item_values[0]  # Producto seleccionado
+            new_cantidad = item_values[1]  # Obtener nueva cantidad desde la tabla
+            new_precio_unitario_str = item_values[2].replace('$', '').replace(',', '')  # Obtener nuevo precio unitario
+            
+            try:
+                new_precio_unitario = float(new_precio_unitario_str)  # Convertir a float
+                
+                # Actualizar el producto en la lista con un formato legible
                 productos_actualizados = [
-                    new_product if prod.strip() == old_product else prod.strip()
-                    for prod in productos_lista
+                    f"{old_product_name.strip()} (Cantidad: {new_cantidad}, Precio: ${new_precio_unitario})"
+                    for prod in productos_lista if prod.strip() == old_product_name.strip()
                 ]
                 modificar_venta(venta_id, cliente_nombre, ",".join(productos_actualizados))  # Mantener cliente existente
                 messagebox.showinfo("Éxito", "Producto modificado correctamente.")
                 self.mostrar_ventas()  # Actualiza la lista de ventas
                 top.destroy()
+            except ValueError:
+                messagebox.showerror("Error", "Por favor ingrese un valor válido.")
 
         # Botón para confirmar la modificación
         btn_confirmar = tk.Button(top, text="Confirmar Modificación", command=confirmar_modificacion)
@@ -154,6 +227,7 @@ class RegistroVentas:
 
         # Mantener el flujo de la ventana emergente
         top.grab_set()
+
 
 
 def main():

@@ -174,29 +174,38 @@ class App:
         self.total_label.config(text=f"Total a pagar: ${total:.2f}")
 
     def agregar_a_venta(self):
-        cliente = self.entry_cliente.get().strip()
-        if not cliente:
-            messagebox.showerror("Error", "Debe ingresar el nombre del cliente.")
+        """Agrega los productos seleccionados a una venta."""
+        cliente_nombre = self.entry_cliente.get().strip()
+        if not cliente_nombre:
+            messagebox.showwarning("Advertencia", "Por favor ingrese el nombre del cliente.")
             return
-        
-        productos_a_vender = [(k, v) for k, v in self.productos_seleccionados.items() if v["seleccionado"]]
+
+        productos_a_vender = []
+        for item_id in self.tree.get_children():
+            if self.tree.item(item_id)["values"][0]:  # Verifica si está seleccionado
+                nombre = self.tree.item(item_id)["values"][2]  # Nombre del producto
+                try:
+                    cantidad = float(self.tree.item(item_id)["values"][4])  # Acepta cantidades decimales
+                    subtotal = float(self.tree.item(item_id)["values"][3].replace('$', '').replace(',', '')) * cantidad  # Subtotal calculado aquí
+                    if cantidad <= 0:
+                        raise ValueError("La cantidad debe ser mayor que cero.")
+                    productos_a_vender.append(f"{nombre} x {cantidad} (${subtotal:.2f})")
+                except ValueError as e:
+                    messagebox.showerror("Error", f"Error al procesar el producto '{nombre}': {e}")
+
         if not productos_a_vender:
-            messagebox.showerror("Error", "No hay productos seleccionados para la venta.")
+            messagebox.showwarning("Advertencia", "No se han seleccionado productos para la venta.")
             return
+
+        # Llamar a insertar_venta con los productos como un diccionario
+        insertar_venta(cliente_nombre, productos_a_vender)  # Inserta los productos como un solo registro.
         
-        try:
-            for item_id, producto in productos_a_vender:
-                if producto["cantidad"] == 0:
-                    raise ValueError("Debe especificar una cantidad válida para todos los productos seleccionados.")
-                # Ensure that insertar_venta matches its definition
-                insertar_venta(cliente, self.tree.set(item_id, "ID"))  # Adjusted call
-                # If you want to log quantity and subtotal, consider adding them to a different function or logging mechanism.
-            
-            messagebox.showinfo("Éxito", "Venta realizada con éxito.")
-            self.mostrar_productos()
-            self.calcular_total()
-        except ValueError as e:
-            messagebox.showerror("Error", f"{e}")
+        messagebox.showinfo("Éxito", f"Venta registrada para {cliente_nombre}:\n{', '.join(productos_a_vender)}")
+        
+        # Limpiar entradas y Treeview
+        self.entry_cliente.delete(0, tk.END)
+        self.mostrar_productos()
+
 
     def modificar_producto(self):
         item_id = self.tree.focus()
