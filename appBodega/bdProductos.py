@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
+from tkinter import simpledialog
 from model.productos_dao import crear_tabla, insertar_producto, ver_productos, borrar_producto, modificar_producto
 from model.ventas_dao import crear_tabla_ventas, insertar_venta
 
@@ -62,33 +63,40 @@ class App:
         item_id = self.tree.focus()
         if not item_id:
             return
-
         valores = self.tree.item(item_id, "values")
         if not valores:
             return
-
-        # Mostrar un mensaje emergente para confirmar la cantidad
+        
+        # Mostrar un cuadro de diálogo para ingresar la nueva cantidad
         try:
-            nueva_cantidad = int(messagebox.askinteger("Editar Cantidad", "Ingrese la nueva cantidad:", initialvalue=valores[4]))
+            nueva_cantidad = simpledialog.askinteger("Editar Cantidad", "Ingrese la nueva cantidad:", initialvalue=valores[4])
+            
+            if nueva_cantidad is None:  # El usuario canceló la entrada
+                return
             if nueva_cantidad < 0:
                 raise ValueError("La cantidad no puede ser negativa.")
-
+            
             # Actualizar la base de datos
             producto_id = valores[1]  # Columna de ID
-            modificar_producto(producto_id, valores[1], valores[2], nueva_cantidad, valores[3])
-
-            # Actualizar la interfaz
+            modificar_producto(producto_id, valores[1], valores[2], nueva_cantidad, valores[3])  # Actualizar en la base de datos
+            
+            # Calcular subtotal
             precio_unitario = float(valores[3])
             subtotal = nueva_cantidad * precio_unitario
+            
+            # Actualizar el elemento en Treeview
             self.tree.item(item_id, values=(valores[0], valores[1], valores[2], f"{precio_unitario:.2f}", nueva_cantidad, f"{subtotal:.2f}"))
-
+            
             # Actualizar los datos seleccionados
             self.productos_seleccionados[item_id]["cantidad"] = nueva_cantidad
             self.productos_seleccionados[item_id]["subtotal"] = subtotal
-
+            
+            # Recalcular total inmediatamente después de actualizar la cantidad
             self.calcular_total()
         except ValueError as e:
             messagebox.showerror("Error", f"Cantidad inválida: {e}")
+
+
 
     def mostrar_productos(self):
         self.tree.delete(*self.tree.get_children())
@@ -130,16 +138,18 @@ class App:
         entry_precio = tk.Entry(producto_popup)
         entry_precio.grid(row=2, column=1, pady=5, padx=5)
 
-        tk.Label(producto_popup, text="Cantidad:").grid(row=3, column=0, pady=5, padx=5)
-        entry_cantidad = tk.Entry(producto_popup)
-        entry_cantidad.grid(row=3, column=1, pady=5, padx=5)
+        # Se elimina la sección de entrada de cantidad
+        # tk.Label(producto_popup, text="Cantidad:").grid(row=3, column=0, pady=5, padx=5)
+        # entry_cantidad = tk.Entry(producto_popup)
+        # entry_cantidad.grid(row=3, column=1, pady=5, padx=5)
 
         def guardar_producto():
             try:
                 producto_id = entry_id.get().strip()
                 nombre = entry_nombre.get().strip()
                 precio = float(entry_precio.get())
-                cantidad = int(entry_cantidad.get())
+                # La cantidad se puede definir aquí si es necesario establecer un valor por defecto
+                cantidad = 0  # O puedes establecer otro valor por defecto si lo prefieres
 
                 if not producto_id or not nombre or precio <= 0 or cantidad < 0:
                     raise ValueError("Datos inválidos.")
@@ -148,7 +158,7 @@ class App:
                 if producto_id in productos_existentes:
                     raise ValueError("El ID del producto ya existe.")
 
-                insertar_producto(producto_id, nombre, precio, cantidad)
+                insertar_producto(producto_id, nombre, precio, cantidad)  # Se usa la cantidad definida
                 messagebox.showinfo("Éxito", "Producto agregado correctamente.")
                 producto_popup.destroy()
                 self.mostrar_productos()
@@ -157,6 +167,7 @@ class App:
                 messagebox.showerror("Error", f"{e}")
 
         tk.Button(producto_popup, text="Guardar", command=guardar_producto).grid(row=4, columnspan=2, pady=10)
+
 
     def calcular_total(self):
         total = sum(prod["subtotal"] for prod in self.productos_seleccionados.values() if prod["seleccionado"])
@@ -167,23 +178,23 @@ class App:
         if not cliente:
             messagebox.showerror("Error", "Debe ingresar el nombre del cliente.")
             return
-
+        
         productos_a_vender = [(k, v) for k, v in self.productos_seleccionados.items() if v["seleccionado"]]
-
         if not productos_a_vender:
             messagebox.showerror("Error", "No hay productos seleccionados para la venta.")
             return
-
+        
         try:
             for item_id, producto in productos_a_vender:
                 if producto["cantidad"] == 0:
                     raise ValueError("Debe especificar una cantidad válida para todos los productos seleccionados.")
-                insertar_venta(cliente, self.tree.set(item_id, "ID"), producto["cantidad"], producto["subtotal"])
-
+                # Ensure that insertar_venta matches its definition
+                insertar_venta(cliente, self.tree.set(item_id, "ID"))  # Adjusted call
+                # If you want to log quantity and subtotal, consider adding them to a different function or logging mechanism.
+            
             messagebox.showinfo("Éxito", "Venta realizada con éxito.")
             self.mostrar_productos()
             self.calcular_total()
-
         except ValueError as e:
             messagebox.showerror("Error", f"{e}")
 

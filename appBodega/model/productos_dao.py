@@ -46,4 +46,16 @@ def borrar_producto(item):
     conexion.cursor.execute(sql, (item,))
     conexion.cerrar()
 
-    
+
+def modificar_producto(item_original, nuevo_item, nueva_descripcion, nueva_cantidad, nuevo_precio):
+    """Modifica un producto existente en la base de datos."""
+    conexion = ConexionDB()  # Instancia de conexión
+    nuevo_monto = nueva_cantidad * nuevo_precio  # Calcular el monto total
+    sql = '''
+    UPDATE productos
+    SET ITEM = ?, DESCRIPTION = ?, QTY = ?, RATE = ?, AMOUNT = ?
+    WHERE ITEM = ?
+    '''
+    conexion.cursor.execute(sql, (nuevo_item, nueva_descripcion, nueva_cantidad, nuevo_precio, nuevo_monto, item_original))
+    conexion.cerrar()
+
