@@ -45,12 +45,6 @@ lbl_ver_ventas.grid(row=1, column=1)
 btnVerVentas = tk.Button(menu_frame, text="Ver Ventas", command=verVentas,bg="lightgreen", font=("Arial", 14), width=20)
 btnVerVentas.grid(row=2, column=1, padx=20)
 
-# Opción 3: Imprimir Recibo
-img_imprimir = tk.PhotoImage(file='appBodega/image/imprimir128.png')
-lbl_imprimir = tk.Label(menu_frame, image=img_imprimir)
-lbl_imprimir.grid(row=1, column=2)
-btnImprimir = tk.Button(menu_frame, text="Imprimir Recibo", command=imprimirRecibo,bg="lightcoral", font=("Arial", 14), width=20)
-btnImprimir.grid(row=2, column=2, padx=20)
 
 #para que corra
 ventana.mainloop()
