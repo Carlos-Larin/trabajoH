@@ -33,6 +33,9 @@ class RegistroVentas:
         btn_detalle_productos = tk.Button(button_frame, text="Detalle Productos", command=self.mostrar_detalles_productos)
         btn_detalle_productos.grid(row=0, column=2, padx=10)
 
+        btn_enviarRecibo = tk.Button(button_frame, text="Enviar Recibo", command=self.enviarRecibo)
+        btn_enviarRecibo.grid(row=0, column=3, padx=10)
+
         # Cargar y mostrar las ventas al iniciar
         self.mostrar_ventas()
 
