@@ -16,9 +16,8 @@ class RegistroVentas:
         self.frame.pack(pady=20)
 
         # Credenciales de correo
-        self.correo_usuario = None
-        self.contrasena_usuario = None
-        self.solicitar_credenciales()
+        self.correo_usuario = "trabajoh060904@gmail.com"  # Correo proporcionado
+        self.contrasena_usuario = "qscq dbxk urnq sbev"  # Contraseña proporcionada
 
         # Configuración de Treeview para mostrar ventas
         self.tree = ttk.Treeview(root)
@@ -46,14 +45,6 @@ class RegistroVentas:
 
         # Cargar y mostrar las ventas al iniciar
         self.mostrar_ventas()
-
-    def solicitar_credenciales(self):
-        """Solicita las credenciales de correo al usuario."""
-        self.correo_usuario = simpledialog.askstring("Credenciales", "Ingrese su correo electrónico:")
-        self.contrasena_usuario = simpledialog.askstring("Credenciales", "Ingrese su contraseña:", show='*')
-        if not self.correo_usuario or not self.contrasena_usuario:
-            messagebox.showerror("Error", "Debe ingresar las credenciales para continuar.")
-            self.root.destroy()
 
     def mostrar_ventas(self):
         """Muestra las ventas almacenadas en el Treeview."""
@@ -116,44 +107,44 @@ class RegistroVentas:
         self.mostrar_ventas()
 
     def generar_pdf(self, venta_id, cliente, productos, total, fecha):
-        """Genera un PDF con los detalles de la venta."""
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt="Recibo de Venta", ln=True, align='C')
-        pdf.ln(10)
-        pdf.cell(200, 10, txt=f"ID Venta: {venta_id}", ln=True)
-        pdf.cell(200, 10, txt=f"Cliente: {cliente}", ln=True)
-        pdf.cell(200, 10, txt=f"Fecha: {fecha}", ln=True)
-        pdf.ln(10)
+            """Genera un PDF con los detalles de la venta."""
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.cell(200, 10, txt="Recibo de Venta", ln=True, align='C')
+            pdf.ln(10)
+            pdf.cell(200, 10, txt=f"ID Venta: {venta_id}", ln=True)
+            pdf.cell(200, 10, txt=f"Cliente: {cliente}", ln=True)
+            pdf.cell(200, 10, txt=f"Fecha: {fecha}", ln=True)
+            pdf.ln(10)
 
-        pdf.cell(200, 10, txt="Detalles de los Productos:", ln=True)
-        pdf.ln(5)
-        for producto in productos.split(','):
-            partes = producto.split(':')
-            if len(partes) == 3:
-                nombre, cantidad, precio = partes
-                try:
-                    cantidad = float(cantidad)
-                    precio = float(precio)
-                    subtotal = cantidad * precio
-                    pdf.cell(200, 10, txt=f"{nombre} - Cantidad: {cantidad}, Precio: ${precio:.2f}, Subtotal: ${subtotal:.2f}", ln=True)
-                except ValueError:
-                    pdf.cell(200, 10, txt=f"{producto} (Error de formato en los valores numéricos)", ln=True)
-            else:
-                pdf.cell(200, 10, txt=f"{producto} (Formato inválido)", ln=True)
+            pdf.cell(200, 10, txt="Detalles de los Productos:", ln=True)
+            pdf.ln(5)
+            for producto in productos.split(','):
+                partes = producto.split(':')
+                if len(partes) == 3:
+                    nombre, cantidad, precio = partes
+                    try:
+                        cantidad = float(cantidad)
+                        precio = float(precio)
+                        subtotal = cantidad * precio
+                        pdf.cell(200, 10, txt=f"{nombre} - Cantidad: {cantidad}, Precio: ${precio:.2f}, Subtotal: ${subtotal:.2f}", ln=True)
+                    except ValueError:
+                        pdf.cell(200, 10, txt=f"{producto} (Error de formato en los valores numéricos)", ln=True)
+                else:
+                    pdf.cell(200, 10, txt=f"{producto} (Formato inválido)", ln=True)
 
-        pdf.ln(10)
-        try:
-            total_float = float(str(total).replace('$', '').replace(',', ''))
-            pdf.cell(200, 10, txt=f"Total: ${total_float:.2f}", ln=True)
-        except ValueError:
-            pdf.cell(200, 10, txt=f"Total: {total} (Error en formato)", ln=True)
+            pdf.ln(10)
+            try:
+                total_float = float(str(total).replace('$', '').replace(',', ''))
+                pdf.cell(200, 10, txt=f"Total: ${total_float:.2f}", ln=True)
+            except ValueError:
+                pdf.cell(200, 10, txt=f"Total: {total} (Error en formato)", ln=True)
 
 
-        pdf_file = f"recibo_{venta_id}.pdf"
-        pdf.output(pdf_file)
-        return pdf_file
+            pdf_file = f"recibo_{venta_id}.pdf"
+            pdf.output(pdf_file)
+            return pdf_file
 
 
     def enviarRecibo(self):
@@ -199,35 +190,7 @@ class RegistroVentas:
         except Exception as e:
             messagebox.showerror("Error", f"No se pudo enviar el correo. Error: {e}")
 
-    def agregar_a_venta(self):
-        """Agrega los productos seleccionados a una venta."""
-        cliente_nombre = simpledialog.askstring("Cliente", "Ingrese el nombre del cliente:")
-        if not cliente_nombre:
-            messagebox.showwarning("Advertencia", "Debe ingresar un nombre de cliente válido.")
-            return
 
-        productos = []
-        for item_id in self.tree.get_children():
-            if self.tree.item(item_id)["values"][0] == "Sí":  # Solo procesa si está seleccionado
-                producto = self.tree.item(item_id)["values"]
-                nombre = producto[2]
-                try:
-                    cantidad = float(producto[4])
-                    precio = float(producto[3].replace('$', '').replace(',', ''))
-                    productos.append(f"{nombre}:{cantidad:.2f}:{precio:.2f}")
-                except ValueError:
-                    messagebox.showerror("Error", f"Error procesando el producto {nombre}. Verifique los datos.")
-                    return
-
-        if not productos:
-            messagebox.showwarning("Advertencia", "No se han seleccionado productos para la venta.")
-            return
-
-        # Registrar la venta en la base de datos
-        insertar_venta(cliente_nombre, productos)
-
-        messagebox.showinfo("Éxito", f"Venta registrada exitosamente para {cliente_nombre}.")
-        self.mostrar_ventas()
 
 
 def main():
@@ -237,3 +200,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
