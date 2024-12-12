@@ -6,7 +6,7 @@ ventana = tk.Tk()
 ventana.title("RJL PRODUCE WHOLESALE")
 ventana.geometry("1400x500")
 ventana.minsize(600,400)
-ventana.iconbitmap("appBodega/image/bodeg.ico")
+ventana.iconbitmap(r"C:/Users/PC/EmpresaH/appBodega/image/bodeg.ico")
 ventana.configure(bg="peach puff")
 
 #aqui el contenido de la ventana

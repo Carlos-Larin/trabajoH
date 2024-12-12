@@ -11,7 +11,7 @@ class RegistroVentas:
         self.root = root
         self.root.title("Registro de Ventas")
         self.root.geometry("800x600")
-        self.root.iconbitmap("appBodega/image/bodeg.ico")
+        self.root.iconbitmap(r"C:/Users/PC/EmpresaH/appBodega/image/bodeg.ico")
         self.frame = tk.Frame(root, bg="peach puff")
         self.frame.pack(pady=20)
 

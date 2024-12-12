@@ -12,7 +12,7 @@ class App:
         self.root.geometry("900x700")
 
         try:
-            self.root.iconbitmap("appBodega/image/bodeg.ico")
+            self.root.iconbitmap(r"C:/Users/PC/EmpresaH/appBodega/image/bodeg.ico")
         except Exception:
             print("Icono no encontrado. Se usará el predeterminado.")
 
