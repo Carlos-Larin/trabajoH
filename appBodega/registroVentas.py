@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog, Toplevel
 from tkinter import ttk
-from model.ventas_dao import ver_ventas, borrar_venta
+from model.ventas_dao import ver_ventas, borrar_venta, insertar_venta
+import smtplib
+from email.message import EmailMessage
+from fpdf import FPDF
 
 class RegistroVentas:
     def __init__(self, root):
@@ -11,6 +14,11 @@ class RegistroVentas:
         self.root.iconbitmap("appBodega/image/bodeg.ico")
         self.frame = tk.Frame(root, bg="peach puff")
         self.frame.pack(pady=20)
+
+        # Credenciales de correo
+        self.correo_usuario = None
+        self.contrasena_usuario = None
+        self.solicitar_credenciales()
 
         # Configuración de Treeview para mostrar ventas
         self.tree = ttk.Treeview(root)
@@ -23,13 +31,13 @@ class RegistroVentas:
         # Botones para acciones
         button_frame = tk.Frame(root, bg="peach puff")
         button_frame.pack(pady=(10, 20))
-        
+
         btn_borrar = tk.Button(button_frame, text="Borrar Venta", command=self.borrar_venta)
         btn_borrar.grid(row=0, column=0, padx=10)
-        
+
         btn_ver_ventas = tk.Button(button_frame, text="Ver Ventas", command=self.mostrar_ventas)
         btn_ver_ventas.grid(row=0, column=1, padx=10)
-        
+
         btn_detalle_productos = tk.Button(button_frame, text="Detalle Productos", command=self.mostrar_detalles_productos)
         btn_detalle_productos.grid(row=0, column=2, padx=10)
 
@@ -38,6 +46,14 @@ class RegistroVentas:
 
         # Cargar y mostrar las ventas al iniciar
         self.mostrar_ventas()
+
+    def solicitar_credenciales(self):
+        """Solicita las credenciales de correo al usuario."""
+        self.correo_usuario = simpledialog.askstring("Credenciales", "Ingrese su correo electrónico:")
+        self.contrasena_usuario = simpledialog.askstring("Credenciales", "Ingrese su contraseña:", show='*')
+        if not self.correo_usuario or not self.contrasena_usuario:
+            messagebox.showerror("Error", "Debe ingresar las credenciales para continuar.")
+            self.root.destroy()
 
     def mostrar_ventas(self):
         """Muestra las ventas almacenadas en el Treeview."""
@@ -63,8 +79,28 @@ class RegistroVentas:
             return
         venta_id = self.tree.item(selected_item)["values"][0]  # Obtiene el ID de la venta seleccionada
         productos_completos = [venta for venta in ver_ventas() if venta[0] == venta_id][0][2]  # Encuentra la venta
-        productos_formateados = "\n".join([producto.strip() for producto in productos_completos.split(',')])
-        messagebox.showinfo("Detalle de Productos", f"Productos:\n\n{productos_formateados}")
+        detalles = []
+        for producto in productos_completos.split(','):
+            partes = producto.strip().split('x')
+            if len(partes) == 2:
+                nombre_producto = partes[0].strip()
+                cantidad_info = partes[1].strip().split('(')
+                if len(cantidad_info) == 2:
+                    cantidad = cantidad_info[0].strip()
+                    precio_total = cantidad_info[1].strip(')').strip('$')
+                    try:
+                        cantidad = float(cantidad)
+                        precio_total = float(precio_total)
+                        precio_unitario = precio_total / cantidad
+                        detalles.append(f"{nombre_producto} (Cantidad: {cantidad:.2f}, Precio unitario: ${precio_unitario:.2f}, Total: ${precio_total:.2f})")
+                    except ValueError:
+                        detalles.append(f"{producto} (Error en formato numérico)")
+                else:
+                    detalles.append(f"{producto} (Formato inválido)")
+            else:
+                detalles.append(f"{producto} (Formato inválido)")
+
+        messagebox.showinfo("Detalle de Productos", f"Productos:\n\n" + "\n".join(detalles))
 
     def borrar_venta(self):
         """Borra la venta seleccionada del Treeview y de la base de datos."""
@@ -75,9 +111,124 @@ class RegistroVentas:
         venta_id = self.tree.item(selected_item)["values"][0]  # Obtiene el ID de la venta seleccionada
         borrar_venta(venta_id)  # Llama a la función para borrar la venta en la base de datos
         messagebox.showinfo("Éxito", f"Venta con ID {venta_id} ha sido borrada.")
-        
+
         # Actualiza la visualización de ventas
         self.mostrar_ventas()
+
+    def generar_pdf(self, venta_id, cliente, productos, total, fecha):
+        """Genera un PDF con los detalles de la venta."""
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.cell(200, 10, txt="Recibo de Venta", ln=True, align='C')
+        pdf.ln(10)
+        pdf.cell(200, 10, txt=f"ID Venta: {venta_id}", ln=True)
+        pdf.cell(200, 10, txt=f"Cliente: {cliente}", ln=True)
+        pdf.cell(200, 10, txt=f"Fecha: {fecha}", ln=True)
+        pdf.ln(10)
+
+        pdf.cell(200, 10, txt="Detalles de los Productos:", ln=True)
+        pdf.ln(5)
+        for producto in productos.split(','):
+            partes = producto.split(':')
+            if len(partes) == 3:
+                nombre, cantidad, precio = partes
+                try:
+                    cantidad = float(cantidad)
+                    precio = float(precio)
+                    subtotal = cantidad * precio
+                    pdf.cell(200, 10, txt=f"{nombre} - Cantidad: {cantidad}, Precio: ${precio:.2f}, Subtotal: ${subtotal:.2f}", ln=True)
+                except ValueError:
+                    pdf.cell(200, 10, txt=f"{producto} (Error de formato en los valores numéricos)", ln=True)
+            else:
+                pdf.cell(200, 10, txt=f"{producto} (Formato inválido)", ln=True)
+
+        pdf.ln(10)
+        try:
+            total_float = float(str(total).replace('$', '').replace(',', ''))
+            pdf.cell(200, 10, txt=f"Total: ${total_float:.2f}", ln=True)
+        except ValueError:
+            pdf.cell(200, 10, txt=f"Total: {total} (Error en formato)", ln=True)
+
+
+        pdf_file = f"recibo_{venta_id}.pdf"
+        pdf.output(pdf_file)
+        return pdf_file
+
+
+    def enviarRecibo(self):
+        """Genera un PDF del recibo y lo envía por correo."""
+        selected_item = self.tree.selection()
+        if not selected_item:
+            messagebox.showwarning("Advertencia", "Seleccione una venta para enviar el recibo.")
+            return
+
+        values = self.tree.item(selected_item)["values"]
+        venta_id, cliente, productos, total, fecha = values
+        productos_completos = [venta for venta in ver_ventas() if venta[0] == venta_id][0][2]
+
+        # Generar el PDF
+        pdf_file = self.generar_pdf(venta_id, cliente, productos_completos, total, fecha)
+
+        # Solicitar correo del cliente
+        correo_cliente = simpledialog.askstring("Enviar Recibo", "Ingrese el correo del cliente:")
+        if not correo_cliente:
+            messagebox.showwarning("Advertencia", "No se ingresó un correo válido.")
+            return
+
+        # Enviar el PDF por correo
+        try:
+            msg = EmailMessage()
+            msg['Subject'] = f"Recibo de Venta ID {venta_id}"
+            msg['From'] = self.correo_usuario
+            msg['To'] = correo_cliente
+            msg.set_content("Adjunto encontrará el recibo de su compra. Gracias por su preferencia.")
+
+            with open(pdf_file, "rb") as f:
+                file_data = f.read()
+                file_name = pdf_file
+            msg.add_attachment(file_data, maintype="application", subtype="pdf", filename=file_name)
+
+            # Configura tu servidor SMTP
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login(self.correo_usuario, self.contrasena_usuario)
+                server.send_message(msg)
+
+            messagebox.showinfo("Éxito", "Recibo enviado correctamente.")
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo enviar el correo. Error: {e}")
+
+    def agregar_a_venta(self):
+        """Agrega los productos seleccionados a una venta."""
+        cliente_nombre = simpledialog.askstring("Cliente", "Ingrese el nombre del cliente:")
+        if not cliente_nombre:
+            messagebox.showwarning("Advertencia", "Debe ingresar un nombre de cliente válido.")
+            return
+
+        productos = []
+        for item_id in self.tree.get_children():
+            if self.tree.item(item_id)["values"][0] == "Sí":  # Solo procesa si está seleccionado
+                producto = self.tree.item(item_id)["values"]
+                nombre = producto[2]
+                try:
+                    cantidad = float(producto[4])
+                    precio = float(producto[3].replace('$', '').replace(',', ''))
+                    productos.append(f"{nombre}:{cantidad:.2f}:{precio:.2f}")
+                except ValueError:
+                    messagebox.showerror("Error", f"Error procesando el producto {nombre}. Verifique los datos.")
+                    return
+
+        if not productos:
+            messagebox.showwarning("Advertencia", "No se han seleccionado productos para la venta.")
+            return
+
+        # Registrar la venta en la base de datos
+        insertar_venta(cliente_nombre, productos)
+
+        messagebox.showinfo("Éxito", f"Venta registrada exitosamente para {cliente_nombre}.")
+        self.mostrar_ventas()
+
 
 def main():
     root = tk.Tk()
