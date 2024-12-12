@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 import subprocess
-from model.productos_dao import crear_tabla, borrar_tabla
+from appBodega.model.productos_dao import crear_tabla, borrar_tabla
 ventana = tk.Tk()
 ventana.title("RJL PRODUCE WHOLESALE")
 ventana.geometry("1400x500")
