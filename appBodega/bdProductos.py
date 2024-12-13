@@ -26,6 +26,10 @@ class App:
         self.entry_cliente = tk.Entry(self.frame)
         self.entry_cliente.grid(row=0, column=1)
 
+        tk.Label(self.frame, text="Dirección:").grid(row=1, column=0, sticky="e")
+        self.entry_direccion = tk.Entry(self.frame)
+        self.entry_direccion.grid(row=1, column=1)
+
         button_frame = tk.Frame(root, bg="peach puff")
         button_frame.pack(pady=(10, 20))
 
@@ -173,11 +177,13 @@ class App:
         total = sum(prod["subtotal"] for prod in self.productos_seleccionados.values() if prod["seleccionado"])
         self.total_label.config(text=f"Total a pagar: ${total:.2f}")
 
+
     def agregar_a_venta(self):
         """Agrega los productos seleccionados a una venta."""
         cliente_nombre = self.entry_cliente.get().strip()
-        if not cliente_nombre:
-            messagebox.showwarning("Advertencia", "Por favor ingrese el nombre del cliente.")
+        cliente_direccion = self.entry_direccion.get().strip()  # Obtener la dirección
+        if not cliente_nombre or not cliente_direccion:
+            messagebox.showwarning("Advertencia", "Por favor ingrese el nombre y la dirección del cliente.")
             return
 
         productos_a_vender = []
@@ -207,11 +213,12 @@ class App:
         productos_str = ', '.join(productos_a_vender)
 
         # Llamar a insertar_venta con los productos formateados y el total calculado
-        insertar_venta(cliente_nombre, productos_str, total_venta)
+        insertar_venta(cliente_nombre, cliente_direccion, productos_str, total_venta)
 
-        messagebox.showinfo("Éxito", f"Venta registrada para {cliente_nombre}:\n{productos_str}\nTotal: ${total_venta:.2f}")
+        messagebox.showinfo("Éxito", f"Venta registrada para {cliente_nombre}:\nDirección: {cliente_direccion}\n{productos_str}\nTotal: ${total_venta:.2f}")
         # Limpiar entradas y Treeview
         self.entry_cliente.delete(0, tk.END)
+        self.entry_direccion.delete(0, tk.END)
         self.mostrar_productos()
 
 
