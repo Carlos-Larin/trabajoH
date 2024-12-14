@@ -178,14 +178,15 @@ class RegistroVentas:
         pdf.set_font("Arial", size=12)
 
         # Título del recibo
+        pdf.cell(190, 10, txt="INVOICE", ln=True, align='C')
         pdf.cell(190, 10, txt="1100 OMAHA DR", ln=True, align='C')
         pdf.cell(190, 10, txt="NORCROSS GA 30093", ln=True, align='C')
         pdf.ln(10)
 
         # Información de la venta
-        pdf.cell(190, 10, txt=f"ID Venta: {venta_id}", ln=True)
+        pdf.cell(190, 10, txt=f"INVOICE #: {venta_id}", ln=True)
         pdf.cell(190, 10, txt=f"Cliente: {cliente}", ln=True)
-        pdf.cell(190, 10, txt=f"Fecha: {fecha}", ln=True)
+        pdf.cell(190, 10, txt=f"DATE: {fecha}", ln=True)
         pdf.cell(190, 10, txt=f"Bill to: {direccion}", ln=True)
         pdf.ln(10)
 
@@ -195,11 +196,11 @@ class RegistroVentas:
 
         # Cabecera de la tabla
         pdf.set_font("Arial", size=10, style="B")
-        pdf.cell(30, 10, "ID Producto", border=1, align="C")
-        pdf.cell(60, 10, "Producto", border=1, align="C")
-        pdf.cell(25, 10, "Cantidad", border=1, align="C")
-        pdf.cell(35, 10, "Precio", border=1, align="C")
-        pdf.cell(40, 10, "Subtotal", border=1, align="C")
+        pdf.cell(30, 10, "ITEM", border=1, align="C")
+        pdf.cell(60, 10, "DESCRIPTION", border=1, align="C")
+        pdf.cell(25, 10, "QTY", border=1, align="C")
+        pdf.cell(35, 10, "RATE", border=1, align="C")
+        pdf.cell(40, 10, "AMOUNT", border=1, align="C")
         pdf.ln()
 
         # Procesar productos
