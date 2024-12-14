@@ -181,25 +181,33 @@ class App:
     def agregar_a_venta(self):
         """Agrega los productos seleccionados a una venta."""
         cliente_nombre = self.entry_cliente.get().strip()
-        cliente_direccion = self.entry_direccion.get().strip()  # Obtener la dirección
+        cliente_direccion = self.entry_direccion.get().strip()
+
         if not cliente_nombre or not cliente_direccion:
             messagebox.showwarning("Advertencia", "Por favor ingrese el nombre y la dirección del cliente.")
             return
 
         productos_a_vender = []
         total_venta = 0.0
+
         for item_id in self.tree.get_children():
             # Verifica si el producto está seleccionado
-            if self.tree.item(item_id)["values"][0] == "Sí":  # Solo procesa si está seleccionado
+            if self.tree.item(item_id)["values"][0] == "Sí":
+                # Solo procesa si está seleccionado
                 nombre = self.tree.item(item_id)["values"][2]  # Nombre del producto
+                producto_id = self.tree.item(item_id)["values"][1]  # ID del producto
+                
                 try:
                     cantidad = float(self.tree.item(item_id)["values"][4])  # Acepta cantidades decimales
                     if cantidad <= 0:
                         raise ValueError("La cantidad debe ser mayor que cero.")
+                    
                     precio_unitario = float(self.tree.item(item_id)["values"][3].replace('$', '').replace(',', ''))
                     subtotal = precio_unitario * cantidad
                     total_venta += subtotal
-                    productos_a_vender.append(f"{nombre} x {cantidad:.2f} (${subtotal:.2f})")
+                    
+                    # Agregar producto con ID a la lista de venta
+                    productos_a_vender.append(f"{producto_id} {nombre} x {cantidad:.2f} (${subtotal:.2f})")
                 except ValueError as e:
                     messagebox.showerror("Error", f"Error al procesar el producto '{nombre}': {e}")
                     return
@@ -214,14 +222,13 @@ class App:
 
         # Llamar a insertar_venta con los productos formateados y el total calculado
         insertar_venta(cliente_nombre, cliente_direccion, productos_str, total_venta)
-
+        
         messagebox.showinfo("Éxito", f"Venta registrada para {cliente_nombre}:\nDirección: {cliente_direccion}\n{productos_str}\nTotal: ${total_venta:.2f}")
+
         # Limpiar entradas y Treeview
         self.entry_cliente.delete(0, tk.END)
         self.entry_direccion.delete(0, tk.END)
         self.mostrar_productos()
-
-
 
 
     def modificar_producto(self):
